@@ -1,33 +1,46 @@
-async function loadTicker() {
-  const symbols = ["SPY", "DIA", "QQQ", "VIX", "AAPL", "MSFT"];
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(",")}`;
-
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!data.quoteResponse || !data.quoteResponse.result) {
-      document.getElementById("ticker-bar").innerHTML = "Error loading data";
-      return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Insider</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
+    
+    #ticker-bar {
+      display: flex;
+      gap: 20px;
+      padding: 12px 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e0e0e0;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    
+    .ticker-item strong {
+      font-weight: 600;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
 
-    const items = data.quoteResponse.result.map(stock => {
-      const change = stock.regularMarketChangePercent;
-      const dir = change >= 0 ? "up" : "down";
-      return `
-        <div class="ticker-item ${dir}">
-          <strong>${stock.symbol}</strong>&nbsp;
-          ${stock.regularMarketPrice.toFixed(2)}&nbsp;
-          (${change.toFixed(2)}%)
-        </div>
-      `;
-    });
+<div id="ticker-bar">
+  Loading market data...
+</div>
 
-    document.getElementById("ticker-bar").innerHTML = items.join("");
-  } catch (err) {
-    document.getElementById("ticker-bar").innerHTML = "Error loading data";
-  }
-}
+<!-- Load the external ticker.js file -->
+<script src="ticker.js"></script>
 
-loadTicker();
-setInterval(loadTicker, 60000);
+</body>
+</html>
