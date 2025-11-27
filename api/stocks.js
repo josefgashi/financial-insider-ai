@@ -11,10 +11,16 @@ export default async function handler(req, res) {
       const data = await response.json();
       const quote = data.chart.result[0].meta;
       
+      const price = quote.regularMarketPrice;
+      const previousClose = quote.chartPreviousClose || quote.previousClose;
+      const change = price - previousClose;
+      const changePercent = (change / previousClose) * 100;
+      
       return {
         symbol: symbol,
-        price: quote.regularMarketPrice,
-        previousClose: quote.previousClose
+        price: price,
+        change: change,
+        changePercent: changePercent
       };
     });
     
