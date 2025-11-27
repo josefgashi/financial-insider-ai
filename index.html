@@ -4,61 +4,64 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Financial Insider Ticker</title>
+
   <style>
     body {
       margin: 0;
-      font-family: Georgia, serif;
+      font-family: Arial, sans-serif;
+      background: white;
     }
-    #ticker-container {
+
+    /* Ticker container */
+    .ticker-wrap {
       width: 100%;
+      background: #ffffff;
+      overflow: hidden;
+      border-bottom: 1px solid #e3e3e3;
+      padding: 6px 0;
+    }
+
+    /* scrolling content */
+    .ticker {
+      display: flex;
+      gap: 40px;
+      white-space: nowrap;
+      animation: scroll 25s linear infinite;
+      font-size: 18px;
+      align-items: center;
+    }
+
+    /* up / down colors */
+    .up {
+      color: #0ecb81;
+    }
+    .down {
+      color: #ff4d4d;
+    }
+
+    /* keyframes */
+    @keyframes scroll {
+      from {
+        transform: translateX(100%);
+      }
+      to {
+        transform: translateX(-100%);
+      }
     }
   </style>
 </head>
+
 <body>
 
-<!-- TradingView Widget BEGIN -->
-<div class="tradingview-widget-container" id="ticker-container">
-  <div class="tradingview-widget-container__widget"></div>
-  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-  {
-    "symbols": [
-      {
-        "description": "S&P 500",
-        "proName": "SP:SPX"
-      },
-      {
-        "description": "Dow Jones",
-        "proName": "DJ:DJI"
-      },
-      {
-        "description": "Nasdaq 100",
-        "proName": "NASDAQ:NDX"
-      },
-      {
-        "description": "Apple",
-        "proName": "NASDAQ:AAPL"
-      },
-      {
-        "description": "Microsoft",
-        "proName": "NASDAQ:MSFT"
-      },
-      {
-        "description": "Google",
-        "proName": "NASDAQ:GOOGL"
-      },
-      {
-        "description": "Tesla",
-        "proName": "NASDAQ:TSLA"
-      }
-    ],
-    "showSymbolLogo": true,
-    "colorTheme": "light",
-    "displayMode": "adaptive",
-    "locale": "en"
-  }
-  </script>
-</div>
-<!-- TradingView Widget END -->
+  <!-- Ticker container -->
+  <div class="ticker-wrap">
+    <div id="ticker" class="ticker">Loading stocks...</div>
+  </div>
 
-</body>
-</html>
+  <script>
+    const API_KEY = "YOUR_API_KEY_HERE"; // <-- Replace with your MarketStack API key
+
+    // Correct symbols for MarketStack
+    const stocks = [
+      { name: "Google", symbol: "GOOGL" },
+      { name: "Tesla",
