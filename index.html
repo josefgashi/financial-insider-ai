@@ -1,67 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Financial Insider Ticker</title>
+<style>
+  #ticker-bar {
+    background: #f5f3ee;
+    border-bottom: 1px solid #d1cdc7;
+    display: flex;
+    gap: 30px;
+    padding: 10px 20px;
+    font-family: Georgia, serif;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  .ticker-item.up { color: #0a8f35; }
+  .ticker-item.down { color: #c40000; }
+</style>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: white;
-    }
+<div id="ticker-bar">
+  Loading stocks…
+</div>
 
-    /* Ticker container */
-    .ticker-wrap {
-      width: 100%;
-      background: #ffffff;
-      overflow: hidden;
-      border-bottom: 1px solid #e3e3e3;
-      padding: 6px 0;
-    }
+<script>
+async function loadTicker() {
+  const symbols = ["^GSPC", "^DJI", "QQQ", "^VIX", "AAPL", "MSFT"];
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(",")}`;
 
-    /* scrolling content */
-    .ticker {
-      display: flex;
-      gap: 40px;
-      white-space: nowrap;
-      animation: scroll 25s linear infinite;
-      font-size: 18px;
-      align-items: center;
-    }
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
 
-    /* up / down colors */
-    .up {
-      color: #0ecb81;
-    }
-    .down {
-      color: #ff4d4d;
-    }
+    const items = data.quoteResponse.result.map(stock => {
+      const change = stock.regularMarketChangePercent || 0;
+      const dir = change >= 0 ? "up" : "down";
+      return `
+        <div class="ticker-item ${dir}">
+          <strong>${stock.symbol}</strong>&nbsp;
+          ${stock.regularMarketPrice.toFixed(2)}&nbsp;
+          (${change.toFixed(2)}%)
+        </div>
+      `;
+    });
 
-    /* keyframes */
-    @keyframes scroll {
-      from {
-        transform: translateX(100%);
-      }
-      to {
-        transform: translateX(-100%);
-      }
-    }
-  </style>
-</head>
+    document.getElementById("ticker-bar").innerHTML = items.join("");
+  } catch (err) {
+    document.getElementById("ticker-bar").innerText = "Error loading data";
+  }
+}
 
-<body>
-
-  <!-- Ticker container -->
-  <div class="ticker-wrap">
-    <div id="ticker" class="ticker">Loading stocks...</div>
-  </div>
-
-  <script>
-    const API_KEY = "YOUR_API_KEY_HERE"; // <-- Replace with your MarketStack API key
-
-    // Correct symbols for MarketStack
-    const stocks = [
-      { name: "Google", symbol: "GOOGL" },
-      { name: "Tesla",
+loadTicker();
+setInterval(loadTicker, 60000); // refresh every 1 min
+</script>
