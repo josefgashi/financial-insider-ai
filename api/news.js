@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   try {
     // Use RSS2JSON service to fetch and parse the feed
     const rssUrl = encodeURIComponent('https://feeds.reuters.com/reuters/businessNews');
-    const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}&api_key=demo&count=10`);
+    const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}&api_key=${process.env.RSS2JSON_API_KEY}&count=10`);
     
     if (!response.ok) {
       throw new Error(`RSS fetch failed: ${response.status}`);
