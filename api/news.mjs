@@ -16,18 +16,59 @@ export default async function handler(req, res) {
       throw new Error(`RSS parsing failed: ${data.message}`);
     }
     
-    const articles = data.items.map(item => ({
-      headline: item.title,
-      summary: item.description.replace(/<[^>]*>/g, '').substring(0, 150),
-      source: 'BBC Business',
-      link: item.link,
-      date: item.pubDate
-    }));
+    const articles = await Promise.all(
+      data.items.map(async (item) => {
+        const cleanText = item.description.replace(/<[^>]*>/g, '').trim();
+        const summary = await paraphraseWithAI(cleanText);
+        
+        return {
+          headline: item.title,
+          summary: summary,
+          source: 'BBC Business',
+          link: item.link,
+          date: item.pubDate,
+          timeAgo: getTimeAgo(item.pubDate)
+        };
+      })
+    );
     
     res.status(200).json({ articles });
     
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: error.message });
+  }
+}
+
+async function paraphraseWithAI(text) {
+  try {
+    if (!text) return 'No description available.';
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: `Rewrite this in 1-2 sentences:\n\n${text.substring(0, 500)}`
+        }]
+      })
+    });
+    
+    if (!response.ok) {
+      return text.substring(0, 150);
+    }
+    
+    const data = await response.json();
+    return data.content[0].text;
+    
+  } catch (error) {
+    return text.substring(0, 150);
   }
 }
