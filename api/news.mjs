@@ -57,17 +57,17 @@ Rating:`
       })
     });
     
-    if (!response.ok) return 5; // Default score if AI fails
+    if (!response.ok) return 5;
     
     const data = await response.json();
     const scoreText = data.content[0].text.trim();
     const score = parseInt(scoreText.match(/\d+/)?.[0] || '5');
     
-    return Math.min(Math.max(score, 1), 10); // Ensure between 1-10
+    return Math.min(Math.max(score, 1), 10);
     
   } catch (error) {
     console.error('AI scoring error:', error);
-    return 5; // Default to middle score
+    return 5;
   }
 }
 
@@ -127,31 +127,33 @@ export default async function handler(req, res) {
       { url: 'https://www.benzinga.com/feed', name: 'Benzinga' }
     ];
     
-    // Fetch all sources in parallel
     const allArticles = await Promise.all(
       sources.map(source => fetchFromSource(source.url, source.name))
     );
     
-    // Flatten articles
     let flatArticles = allArticles.flat().filter(article => article.headline);
     
     console.log(`Fetched ${flatArticles.length} articles, scoring importance...`);
     
-    // Score each article with AI + source reputation + recency
+    // Score each article
     const scoredArticles = await Promise.all(
       flatArticles.map(async (article) => {
-        // Get AI importance score (1-10)
         const aiScore = await scoreArticleImportance(article.headline, article.summary, article.source);
-        
-        // Get source reputation score (1-10)
         const sourceScore = sourceScores[article.source] || 5;
         
-        // Recency bonus (articles from last hour get +1)
+        // Enhanced recency scoring
         const hoursOld = (Date.now() - new Date(article.date)) / (1000 * 60 * 60);
-        const recencyBonus = hoursOld < 1 ? 1 : 0;
+        let recencyScore = 10;
         
-        // Final score: weighted average
-        const finalScore = (aiScore * 0.6) + (sourceScore * 0.3) + recencyBonus;
+        if (hoursOld < 1) recencyScore = 10;      // Last hour: 10 points
+        else if (hoursOld < 3) recencyScore = 8;   // 1-3 hours: 8 points
+        else if (hoursOld < 6) recencyScore = 6;   // 3-6 hours: 6 points
+        else if (hoursOld < 12) recencyScore = 4;  // 6-12 hours: 4 points
+        else if (hoursOld < 24) recencyScore = 2;  // 12-24 hours: 2 points
+        else recencyScore = 0;                     // Older: 0 points
+        
+        // Weighted scoring: Recency 50%, AI importance 30%, Source 20%
+        const finalScore = (recencyScore * 0.5) + (aiScore * 0.3) + (sourceScore * 0.2);
         
         return {
           ...article,
@@ -160,15 +162,14 @@ export default async function handler(req, res) {
       })
     );
     
-    // Sort by importance (highest first)
+    // Sort by final score (highest first)
     const sortedArticles = scoredArticles
       .sort((a, b) => b.importanceScore - a.importanceScore)
       .slice(0, 20);
     
-    // Remove score from response (internal only)
     const articles = sortedArticles.map(({ importanceScore, ...article }) => article);
     
-    console.log(`Returning ${articles.length} articles sorted by importance`);
+    console.log(`Returning ${articles.length} articles sorted by recency + importance`);
     
     res.status(200).json({ articles });
     
