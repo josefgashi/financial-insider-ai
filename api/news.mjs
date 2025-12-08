@@ -9,39 +9,6 @@ function getTimeAgo(dateString) {
   return `${Math.floor(seconds / 86400)} days ago`;
 }
 
-async function paraphraseWithAI(text) {
-  try {
-    if (!text) return 'No description available.';
-    
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 100,
-        messages: [{
-          role: 'user',
-          content: `Rewrite this in 1-2 sentences:\n\n${text.substring(0, 500)}`
-        }]
-      })
-    });
-    
-    if (!response.ok) {
-      return text.substring(0, 150);
-    }
-    
-    const data = await response.json();
-    return data.content[0].text;
-    
-  } catch (error) {
-    return text.substring(0, 150);
-  }
-}
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -57,3 +24,22 @@ export default async function handler(req, res) {
     const data = await response.json();
     
     if (data.status !== 'ok') {
+      throw new Error(`RSS parsing failed: ${data.message}`);
+    }
+    
+    const articles = data.items.map(item => ({
+      headline: item.title,
+      summary: item.description.replace(/<[^>]*>/g, '').substring(0, 200),
+      source: 'BBC Business',
+      link: item.link,
+      date: item.pubDate,
+      timeAgo: getTimeAgo(item.pubDate)
+    }));
+    
+    res.status(200).json({ articles });
+    
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
