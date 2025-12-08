@@ -9,13 +9,66 @@ function getTimeAgo(dateString) {
   return `${Math.floor(seconds / 86400)} days ago`;
 }
 
-function shuffleArray(array) {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+// Source reputation scores
+const sourceScores = {
+  'Wall Street Journal': 10,
+  'Financial Times': 10,
+  'Bloomberg': 10,
+  'Reuters': 9,
+  'The Economist': 9,
+  'Dow Jones': 9,
+  'Forbes': 8,
+  'Fortune': 8,
+  'CNBC': 8,
+  'MarketWatch': 7,
+  'Barrons': 7,
+  'Business Insider': 6,
+  'CNN Business': 6,
+  'Seeking Alpha': 6,
+  'Benzinga': 5,
+  'Investing.com': 5,
+  'TheStreet': 5,
+  'Motley Fool': 5,
+  'Nasdaq': 6,
+  'BBC Business': 7
+};
+
+async function scoreArticleImportance(headline, summary, source) {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 50,
+        messages: [{
+          role: 'user',
+          content: `Rate this financial news headline's importance for investors on a scale of 1-10 (10 = extremely market-moving, 1 = not important). Only respond with a number.
+
+Headline: ${headline}
+Summary: ${summary}
+
+Rating:`
+        }]
+      })
+    });
+    
+    if (!response.ok) return 5; // Default score if AI fails
+    
+    const data = await response.json();
+    const scoreText = data.content[0].text.trim();
+    const score = parseInt(scoreText.match(/\d+/)?.[0] || '5');
+    
+    return Math.min(Math.max(score, 1), 10); // Ensure between 1-10
+    
+  } catch (error) {
+    console.error('AI scoring error:', error);
+    return 5; // Default to middle score
   }
-  return shuffled;
 }
 
 async function fetchFromSource(sourceUrl, sourceName) {
@@ -54,7 +107,6 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET');
   
   try {
-    // Comprehensive list of financial news sources
     const sources = [
       { url: 'http://feeds.bbci.co.uk/news/business/rss.xml', name: 'BBC Business' },
       { url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', name: 'CNBC' },
@@ -72,8 +124,7 @@ export default async function handler(req, res) {
       { url: 'https://www.barrons.com/rss', name: 'Barrons' },
       { url: 'https://www.thestreet.com/rss/index.rss', name: 'TheStreet' },
       { url: 'https://www.nasdaq.com/feed/rssoutbound', name: 'Nasdaq' },
-      { url: 'https://www.benzinga.com/feed', name: 'Benzinga' },
-      { url: 'https://www.cnn.com/services/rss/', name: 'CNN Business' }
+      { url: 'https://www.benzinga.com/feed', name: 'Benzinga' }
     ];
     
     // Fetch all sources in parallel
@@ -81,13 +132,43 @@ export default async function handler(req, res) {
       sources.map(source => fetchFromSource(source.url, source.name))
     );
     
-    // Flatten all articles into one array
-    const flatArticles = allArticles.flat().filter(article => article.headline);
+    // Flatten articles
+    let flatArticles = allArticles.flat().filter(article => article.headline);
     
-    console.log(`Total articles fetched: ${flatArticles.length}`);
+    console.log(`Fetched ${flatArticles.length} articles, scoring importance...`);
     
-    // Shuffle to mix sources randomly
-    const articles = shuffleArray(flatArticles).slice(0, 20);
+    // Score each article with AI + source reputation + recency
+    const scoredArticles = await Promise.all(
+      flatArticles.map(async (article) => {
+        // Get AI importance score (1-10)
+        const aiScore = await scoreArticleImportance(article.headline, article.summary, article.source);
+        
+        // Get source reputation score (1-10)
+        const sourceScore = sourceScores[article.source] || 5;
+        
+        // Recency bonus (articles from last hour get +1)
+        const hoursOld = (Date.now() - new Date(article.date)) / (1000 * 60 * 60);
+        const recencyBonus = hoursOld < 1 ? 1 : 0;
+        
+        // Final score: weighted average
+        const finalScore = (aiScore * 0.6) + (sourceScore * 0.3) + recencyBonus;
+        
+        return {
+          ...article,
+          importanceScore: finalScore
+        };
+      })
+    );
+    
+    // Sort by importance (highest first)
+    const sortedArticles = scoredArticles
+      .sort((a, b) => b.importanceScore - a.importanceScore)
+      .slice(0, 20);
+    
+    // Remove score from response (internal only)
+    const articles = sortedArticles.map(({ importanceScore, ...article }) => article);
+    
+    console.log(`Returning ${articles.length} articles sorted by importance`);
     
     res.status(200).json({ articles });
     
