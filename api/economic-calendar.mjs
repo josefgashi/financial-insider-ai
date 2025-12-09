@@ -58,4 +58,41 @@ export default async function handler(req, res) {
           actual: event.actual || '—'
         };
       })
-      .sort
+      .sort((a, b) => {
+        return new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time);
+      })
+      .slice(0, 20); // Top 20 events
+    
+    console.log(`Returning ${events.length} events`);
+    
+    res.status(200).json({ 
+      events,
+      debug: {
+        totalFromAPI: data.response.length,
+        filteredCount: events.length,
+        dateRange: `${today} to ${toDate}`
+      }
+    });
+    
+  } catch (error) {
+    console.error('Economic calendar error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+}
+
+function formatTime(dateString) {
+  try {
+    const date = new Date(dateString + ' UTC');
+    const estTime = new Date(date.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    
+    let hours = estTime.getHours();
+    const minutes = estTime.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    const min = minutes.toString().padStart(2, '0');
+    
+    return `${hours}:${min} ${ampm}`;
+  } catch (e) {
+    return 'TBD';
+  }
+}
