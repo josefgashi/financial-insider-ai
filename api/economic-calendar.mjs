@@ -7,11 +7,11 @@ export default async function handler(req, res) {
     const now = new Date();
     const estDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
     
-    // Get today and next 2 days
+    // Get today and next 3 days
     const today = estDate.toISOString().split('T')[0];
-    const twoDaysLater = new Date(estDate);
-    twoDaysLater.setDate(estDate.getDate() + 2);
-    const toDate = twoDaysLater.toISOString().split('T')[0];
+    const threeDaysLater = new Date(estDate);
+    threeDaysLater.setDate(estDate.getDate() + 3);
+    const toDate = threeDaysLater.toISOString().split('T')[0];
     
     console.log('Fetching events from', today, 'to', toDate);
     
@@ -26,16 +26,18 @@ export default async function handler(req, res) {
     
     const data = await response.json();
     
+    console.log('FCS API returned:', data.status, 'Total events:', data.response?.length || 0);
+    
     if (!data.response || !Array.isArray(data.response)) {
-      res.status(200).json({ events: [] });
+      res.status(200).json({ events: [], debug: 'No response array from FCS' });
       return;
     }
     
-    // Filter and format events
+    // Filter and format events - show importance 1, 2, or 3 (medium and high)
     const events = data.response
       .filter(event => {
         const imp = parseInt(event.importance);
-        return imp >= 2; // Only high importance (2 or 3)
+        return imp >= 1 && imp <= 3; // Medium (1) to High (2-3)
       })
       .map(event => {
         const imp = parseInt(event.importance);
@@ -56,35 +58,4 @@ export default async function handler(req, res) {
           actual: event.actual || '—'
         };
       })
-      .sort((a, b) => {
-        return new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time);
-      })
-      .slice(0, 15); // Top 15 events
-    
-    console.log(`Returning ${events.length} high-importance events`);
-    
-    res.status(200).json({ events });
-    
-  } catch (error) {
-    console.error('Economic calendar error:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
-
-function formatTime(dateString) {
-  try {
-    const date = new Date(dateString + ' UTC'); // Parse as UTC
-    // Convert to EST
-    const estTime = new Date(date.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    
-    let hours = estTime.getHours();
-    const minutes = estTime.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    const min = minutes.toString().padStart(2, '0');
-    
-    return `${hours}:${min} ${ampm}`;
-  } catch (e) {
-    return 'TBD';
-  }
-}
+      .sort
