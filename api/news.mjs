@@ -1,24 +1,24 @@
 const RSS2JSON_API_KEY = process.env.RSS2JSON_API_KEY;
 
 const feeds = [
-  'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/business/rss.xml',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.marketwatch.com/rss/topstories',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.ft.com/?format=rss',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.investing.com/rss/news.rss',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://seekingalpha.com/feed.xml',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.fool.com/feeds/index.aspx',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.businessinsider.com/rss',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://fortune.com/feed',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.forbes.com/real-time/feed2/',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.economist.com/finance-and-economics/rss.xml',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.a.dj.com/rss/RSSMarketsMain.xml',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.barrons.com/feed/rss/',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.thestreet.com/feeds/news/markets.xml',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.nasdaq.com/feed/rssoutbound',
-  'https://api.rss2json.com/v1/api.json?rss_url=https://www.benzinga.com/feed',
-  'https://api.rss2json.com/v1/api.json?rss_url=http://rss.cnn.com/rss/money_latest.rss'
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/business/rss.xml', name: 'BBC Business' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147', name: 'CNBC' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.marketwatch.com/rss/topstories', name: 'MarketWatch' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.ft.com/?format=rss', name: 'Financial Times' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.investing.com/rss/news.rss', name: 'Investing.com' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://seekingalpha.com/feed.xml', name: 'Seeking Alpha' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.fool.com/feeds/index.aspx', name: 'Motley Fool' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.businessinsider.com/rss', name: 'Business Insider' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://fortune.com/feed', name: 'Fortune' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.forbes.com/real-time/feed2/', name: 'Forbes' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.economist.com/finance-and-economics/rss.xml', name: 'The Economist' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.a.dj.com/rss/RSSMarketsMain.xml', name: 'Wall Street Journal' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml', name: 'Wall Street Journal' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.barrons.com/feed/rss/', name: 'Barrons' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.thestreet.com/feeds/news/markets.xml', name: 'The Street' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.nasdaq.com/feed/rssoutbound', name: 'Nasdaq' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.benzinga.com/feed', name: 'Benzinga' },
+  { url: 'https://api.rss2json.com/v1/api.json?rss_url=http://rss.cnn.com/rss/money_latest.rss', name: 'CNN Business' }
 ];
 
 const sourceReputation = {
@@ -50,11 +50,11 @@ export default async function handler(req, res) {
   try {
     const allArticles = [];
     
-    const feedPromises = feeds.map(async (feedUrl) => {
+    const feedPromises = feeds.map(async (feed) => {
       try {
         const url = RSS2JSON_API_KEY 
-          ? `${feedUrl}&api_key=${RSS2JSON_API_KEY}`
-          : feedUrl;
+          ? `${feed.url}&api_key=${RSS2JSON_API_KEY}`
+          : feed.url;
         
         const response = await fetch(url);
         const data = await response.json();
@@ -65,12 +65,12 @@ export default async function handler(req, res) {
             link: item.link,
             pubDate: item.pubDate,
             description: item.description,
-            source: data.feed?.title || 'Unknown'
+            source: feed.name
           }));
         }
         return [];
       } catch (error) {
-        console.error(`Error fetching feed ${feedUrl}:`, error);
+        console.error(`Error fetching feed ${feed.name}:`, error);
         return [];
       }
     });
@@ -84,6 +84,11 @@ export default async function handler(req, res) {
         const reputationScore = sourceReputation[article.source] || 5;
         
         const aiScore = await getAIScore(article);
+        
+        // Only include if AI score is 7 or higher
+        if (aiScore < 7) {
+          return null;
+        }
         
         const totalScore = (recencyScore * 0.5) + (aiScore * 0.3) + (reputationScore * 0.2);
         
@@ -105,6 +110,7 @@ export default async function handler(req, res) {
     );
     
     const topArticles = scoredArticles
+      .filter(article => article !== null)
       .sort((a, b) => b.score - a.score)
       .slice(0, 50);
     
@@ -122,39 +128,36 @@ export default async function handler(req, res) {
 
 async function getAIScore(article) {
   try {
-    const prompt = `You are a senior financial analyst filtering news for C-suite executives, institutional investors, and business professionals. Rate this headline's importance from 1-10.
+    const prompt = `You are filtering news for institutional investors and Fortune 500 executives. Rate this headline's BUSINESS IMPACT from 1-10.
 
-CRITERIA FOR HIGH SCORES (7-10):
-- Major earnings reports or guidance changes from significant companies
-- M&A deals, IPOs, major corporate transactions
-- Federal Reserve decisions, central bank policy, interest rate changes
-- Key economic indicators (jobs, GDP, inflation, manufacturing data)
-- Significant regulatory changes affecting industries
-- Major product launches or technological breakthroughs affecting markets
-- Leadership changes at Fortune 500 companies
-- Geopolitical events with direct market impact
-- Industry-wide disruptions or trends
-- Major bankruptcies, restructurings, or financial distress at notable companies
+ONLY GIVE HIGH SCORES (8-10) FOR:
+- Major earnings beats/misses from S&P 500 companies
+- Billion-dollar M&A deals or IPOs
+- Federal Reserve rate decisions or major policy changes
+- Critical economic data: Jobs report, GDP, CPI/inflation
+- Regulatory changes affecting entire industries
+- CEO changes at major publicly traded companies
+- Significant product launches affecting market cap (Apple, Tesla, etc)
+- Geopolitical events directly moving markets
+- Major bankruptcies or restructurings of notable companies
 
-REJECT WITH LOW SCORES (1-4):
-- Personal finance advice ("Should I...", "How to...", "Do I need...")
-- Individual consumer stories or anecdotes
-- Lifestyle, entertainment, or celebrity business content
-- Opinion pieces about personal decisions
-- Real estate advice for individual homebuyers
-- Retail investor tips or personal portfolio advice
-- Wedding expenses, personal budgets, individual purchases
-- "Best credit cards", "How much to save", etc.
-- Human interest stories tangentially related to business
-- Minor company announcements with no market impact
+GIVE LOW SCORES (1-3) TO:
+- SEC Form 8K filings (unless tied to major news)
+- Executive appointments at small/unknown companies
+- Personal finance advice or "how-to" articles
+- Individual stock tips or portfolio advice
+- Lifestyle or human interest stories
+- Opinion pieces without hard news
+- Minor product updates
+- Conference presentations or earnings call transcripts without context
+- "Flow traders" or personal trading strategies
 
 Headline: "${article.title}"
 Source: ${article.source}
-Description: ${article.description || ''}
 
-Consider: Would a Bloomberg Terminal subscriber care about this? Would it move markets or affect business decisions?
+Question: Would this headline appear on the front page of the Wall Street Journal or Bloomberg Terminal? Does it affect billions in market cap?
 
-Return ONLY a number 1-10. Be harsh - most headlines should score 5 or below.`;
+Return ONLY a number 1-10. Be extremely harsh.`;
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -177,13 +180,13 @@ Return ONLY a number 1-10. Be harsh - most headlines should score 5 or below.`;
     
     const data = await response.json();
     const scoreText = data.content[0].text.trim();
-    const score = parseInt(scoreText.match(/\d+/)?.[0] || '5');
+    const score = parseInt(scoreText.match(/\d+/)?.[0] || '3');
     
     return Math.min(Math.max(score, 1), 10);
     
   } catch (error) {
     console.error('AI scoring error:', error);
-    return 5;
+    return 3;
   }
 }
 
