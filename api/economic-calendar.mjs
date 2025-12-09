@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     
     // Fetch economic calendar from FCS API
     const response = await fetch(
-      `https://fcsapi.com/api-v3/economic-calendar?access_key=${process.env.FCS_API_KEY}&date=${today}`
+      `https://fcsapi.com/api-v3/forex/economy_cal?access_key=${process.env.FCS_API_KEY}&from=${today}&to=${today}`
     );
     
     if (!response.ok) {
@@ -25,21 +25,22 @@ export default async function handler(req, res) {
     const events = data.response
       .filter(event => {
         // Only show high and medium importance events
-        return event.impact === 'high' || event.impact === 'medium';
+        return event.impact === 'High' || event.impact === 'Medium';
       })
       .map(event => ({
         time: formatTime(event.date),
-        title: event.event,
+        title: event.title,
         country: event.country,
-        currency: event.currency,
-        importance: event.impact,
+        importance: event.impact.toLowerCase(),
         forecast: event.forecast || '—',
         previous: event.previous || '—',
         actual: event.actual || '—'
       }))
       .sort((a, b) => {
         // Sort by time
-        return new Date('1970/01/01 ' + a.time) - new Date('1970/01/01 ' + b.time);
+        const timeA = new Date('1970/01/01 ' + a.time);
+        const timeB = new Date('1970/01/01 ' + b.time);
+        return timeA - timeB;
       });
     
     res.status(200).json({ events });
