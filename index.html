@@ -17,10 +17,102 @@
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 900px;
             margin: 0 auto;
+        }
+
+        .forex-banner {
+            max-width: 1100px;
+            margin: 0 auto 24px;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 14px;
+            padding: 16px 20px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+            backdrop-filter: blur(6px);
+            color: #1f2937;
+        }
+
+        .forex-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 0.95em;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .forex-source {
+            font-weight: 500;
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+
+        .forex-ticker {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .forex-card {
+            background: linear-gradient(135deg, #eef2ff, #f9fafb);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .forex-pair {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .flag {
+            font-size: 1.1em;
+        }
+
+        .rate-value {
+            font-feature-settings: 'tnum';
+            font-variant-numeric: tabular-nums;
+            color: #111827;
+            font-weight: 700;
+        }
+
+        .change {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .change.up {
+            color: #059669;
+        }
+
+        .change.down {
+            color: #dc2626;
+        }
+
+        .loading-banner,
+        .error-banner {
+            text-align: center;
+            width: 100%;
+            color: #6b7280;
+            font-weight: 600;
+            padding: 8px 0;
+        }
+
+        .error-banner {
+            color: #b91c1c;
         }
         
         h1 {
@@ -100,15 +192,105 @@
     </style>
 </head>
 <body>
+    <div class="forex-banner" aria-live="polite">
+        <div class="forex-header">
+            <span>Live USD FX Rates</span>
+            <span class="forex-source">Source: exchangerate.host</span>
+        </div>
+        <div id="forex-ticker" class="forex-ticker">
+            <div class="loading-banner">Loading FX rates...</div>
+        </div>
+    </div>
     <div class="container">
         <h1>📈 Financial Insider AI</h1>
         <div id="news-container" class="loading">Loading news...</div>
     </div>
 
     <script>
+        const forexPairs = [
+            { pair: 'USD/GBP', flagA: '🇺🇸', flagB: '🇬🇧', key: 'GBP' },
+            { pair: 'USD/EUR', flagA: '🇺🇸', flagB: '🇪🇺', key: 'EUR' },
+            { pair: 'USD/JPY', flagA: '🇺🇸', flagB: '🇯🇵', key: 'JPY' }
+        ];
+
+        const dateLabel = (daysAgo = 0) => {
+            const d = new Date();
+            d.setDate(d.getDate() - daysAgo);
+            return d.toISOString().slice(0, 10);
+        };
+
+        async function fetchRates(label) {
+            const response = await fetch(`https://api.exchangerate.host/${label}?base=USD&symbols=GBP,EUR,JPY`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (!data.success || !data.rates) {
+                throw new Error('Invalid FX response');
+            }
+
+            return data.rates;
+        }
+
+        async function loadForex() {
+            const ticker = document.getElementById('forex-ticker');
+
+            try {
+                const latestRatesPromise = fetchRates('latest');
+
+                // Walk back up to 5 days to find a prior rate (handles weekends/holidays)
+                let previousRates;
+                let lastError = null;
+                for (let i = 1; i <= 5 && !previousRates; i++) {
+                    try {
+                        previousRates = await fetchRates(dateLabel(i));
+                    } catch (err) {
+                        lastError = err;
+                    }
+                }
+
+                const latestRates = await latestRatesPromise;
+                if (!previousRates) {
+                    throw lastError || new Error('Unable to load previous FX rates');
+                }
+
+                ticker.innerHTML = forexPairs.map(({ pair, flagA, flagB, key }) => {
+                    const price = latestRates[key];
+                    const previous = previousRates[key];
+                    if (!price || !previous) {
+                        throw new Error(`Missing rate for ${pair}`);
+                    }
+
+                    const change = price - previous;
+                    const changePercent = (change / previous) * 100;
+                    const direction = change >= 0 ? 'up' : 'down';
+                    const arrow = direction === 'up' ? '▲' : '▼';
+                    const formattedPrice = price.toFixed(pair === 'USD/JPY' ? 2 : 4);
+                    const formattedChange = changePercent.toFixed(2);
+
+                    return `
+                        <div class="forex-card" role="group" aria-label="${pair} rate">
+                            <div class="forex-pair">
+                                <span class="flag" aria-hidden="true">${flagA}</span>
+                                <span class="flag" aria-hidden="true">${flagB}</span>
+                                <span>${pair}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="rate-value">${formattedPrice}</div>
+                                <div class="change ${direction}">${arrow} ${formattedChange}%</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                ticker.innerHTML = `<div class="error-banner">Failed to load FX rates: ${error.message}</div>`;
+            }
+        }
+
         async function loadNews() {
             const container = document.getElementById('news-container');
-            
+
             try {
                 const response = await fetch('/api/news');
                 const data = await response.json();
@@ -134,7 +316,9 @@
                 container.innerHTML = `<div class="error">Failed to load news: ${error.message}</div>`;
             }
         }
-        
+
+        loadForex();
+        setInterval(loadForex, 60000);
         loadNews();
     </script>
 </body>
