@@ -83,8 +83,8 @@ export default async function handler(req, res) {
         
         const aiScore = await getAIScore(article);
         
-        // Only include if AI score is 7 or higher
-        if (aiScore < 7) {
+        // Only include if AI score is 6 or higher
+        if (aiScore < 6) {
           return null;
         }
         
